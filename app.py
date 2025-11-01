@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+PORT = int(os.getenv('PORT', 5000))
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
@@ -140,4 +142,5 @@ def query():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=True)
+    debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=PORT, debug=debug)
