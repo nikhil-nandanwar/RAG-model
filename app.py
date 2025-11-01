@@ -9,7 +9,8 @@ import tempfile
 from pypdf import PdfReader
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from .env file (only for local/dev); in production
+# environment variables should be provided by the hosting environment/secret manager.
 load_dotenv()
 
 PORT = int(os.getenv('PORT', 5000))
@@ -26,8 +27,18 @@ DOC_STORE = {}  # doc_id -> original_text
 # Initialize Gemini client (google-genai uses env var GOOGLE_API_KEY or GEMINI_API_KEY depending on config)
 # According to Gemini docs, client picks API key from env var if set.
 gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+# If REQUIRE_GEMINI is true, fail fast in environments where the API key must be present
+require_gemini = os.getenv("REQUIRE_GEMINI", "false").lower() in ("1", "true", "yes")
 if not gemini_api_key:
-    print("WARNING: GEMINI_API_KEY (or GOOGLE_API_KEY) not set. Set it before calling generation endpoints.")
+    msg = "GEMINI_API_KEY (or GOOGLE_API_KEY) not set. Set it before calling generation endpoints."
+    if require_gemini:
+        # Fail fast in production-like environments
+        raise RuntimeError(msg)
+    else:
+        # Use app logger (works with Gunicorn logging)
+        app.logger.warning(msg)
+
+# Initialize client if key is present
 client = genai.Client(api_key=gemini_api_key) if gemini_api_key else None
 
 @app.route("/upload", methods=["POST"])
@@ -142,5 +153,6 @@ def query():
 
 
 if __name__ == "__main__":
-    debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-    app.run(host='0.0.0.0', port=PORT, debug=debug)
+    # In dev you can enable debug via FLASK_DEBUG=1 in the environment
+    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() in ("1", "true", "yes")
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=debug_mode)
