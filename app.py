@@ -16,7 +16,14 @@ load_dotenv()
 PORT = int(os.getenv('PORT', 5000))
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+# CORS(app)  # Enable CORS for all routes
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "https://rag-model-b26j.onrender.com",
+        ]
+    }
+})
 
 # Initialize RAG index (loads sentence-transformers model)
 RAG = RAGIndex()  # uses default model 'all-MiniLM-L6-v2'
